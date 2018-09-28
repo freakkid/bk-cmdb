@@ -169,44 +169,55 @@ func (lgc *Logics) addDevice(deviceInfo meta.NetcollectDevice, pheader http.Head
 		return -1, defErr.Errorf(common.CCErrCommParamsLostField, common.BKDeviceModelField)
 	}
 
-	// check if device_name exist
-	isExist, err := lgc.checkIfNetDeviceNameExist(deviceInfo.DeviceName, ownerID)
-	if nil != err {
-		blog.Errorf("add net device fail, error: %v", err)
-		return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
-	}
-	if isExist {
-		blog.Errorf("add net device fail, error: duplicate device_name")
-		return -1, defErr.Errorf(common.CCErrCommDuplicateItem)
-	}
-
 	// check if bk_object_id and bk_object_name are net device object
-	err = lgc.checkIfNetDeviceObject(&deviceInfo, pheader)
+	err := lgc.checkIfNetDeviceObject(&deviceInfo, pheader)
 	if nil != err {
 		blog.Errorf("add net device fail, error: %v, object name [%s] and object ID [%s]",
 			err, deviceInfo.ObjectName, deviceInfo.ObjectID)
 		return -1, err
 	}
 
+	// check if device_name exist
+	isExist, err := lgc.checkIfNetDeviceNameExist(deviceInfo.DeviceName, ownerID)
+	if nil != err {
+		blog.Errorf("add net device fail, error: %v", err)
+		return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
+	}
+
 	// add to the storage
 	now := time.Now()
-	deviceInfo.CreateTime = &now
-	now = time.Now()
 	deviceInfo.LastTime = &now
-	deviceInfo.OwnerID = ownerID
 
-	deviceInfo.DeviceID, err = lgc.Instance.GetIncID(common.BKTableNameNetcollectDevice)
+	if !isExist {
+		deviceInfo.CreateTime = &now
+		deviceInfo.OwnerID = ownerID
+
+		deviceInfo.DeviceID, err = lgc.Instance.GetIncID(common.BKTableNameNetcollectDevice)
+		if nil != err {
+			blog.Errorf("add net device, failed to get id, error: %v", err)
+			return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
+		}
+
+		if _, err = lgc.Instance.Insert(common.BKTableNameNetcollectDevice, deviceInfo); nil != err {
+			blog.Error("failed to insert net device, error: %v", err)
+			return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
+		}
+		return deviceInfo.DeviceID, nil
+	}
+
+	deviceID, err := lgc.getNetDeviceIDByName(deviceInfo.DeviceName, ownerID)
 	if nil != err {
-		blog.Errorf("add net device, failed to get id, error: %v", err)
+		blog.Errorf("update net device, failed to get id, error: %v", err)
 		return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
 	}
 
-	if _, err = lgc.Instance.Insert(common.BKTableNameNetcollectDevice, deviceInfo); nil != err {
-		blog.Error("failed to insert net device, error: %v", err)
-		return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
+	if err = lgc.updateNetDeviceByName(deviceInfo); nil != err {
+		blog.Errorf("update net device failed, error: %v", err)
+		return -1, err
 	}
 
-	return deviceInfo.DeviceID, nil
+	blog.V(4).Infof("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+	return deviceID, nil
 }
 
 func (lgc *Logics) findDevice(fields []string, condition, result interface{}, sort string, skip, limit int) error {
@@ -243,6 +254,36 @@ func (lgc *Logics) checkIfNetDeviceNameExist(deviceName string, ownerID string) 
 	}
 
 	return false, nil
+}
+
+// check if net device name exist
+func (lgc *Logics) getNetDeviceIDByName(deviceName string, ownerID string) (int64, error) {
+	queryParams := common.KvMap{common.BKDeviceNameField: deviceName, common.BKOwnerIDField: ownerID}
+
+	result := meta.NetcollectDevice{}
+
+	err := lgc.Instance.GetOneByCondition(common.BKTableNameNetcollectDevice, nil, queryParams, &result)
+	if nil != err {
+		blog.Errorf("get net device ID by name, query device fail, error information is %v, params:%v",
+			err, queryParams)
+		return 0, err
+	}
+
+	return result.DeviceID, nil
+}
+
+func (lgc *Logics) updateNetDeviceByName(deviceInfo meta.NetcollectDevice) error {
+	queryParams := common.KvMap{
+		common.BKDeviceNameField: deviceInfo.DeviceName,
+		common.BKOwnerIDField:    deviceInfo.OwnerID}
+
+	if err := lgc.Instance.UpdateByCondition(common.BKTableNameNetcollectDevice, deviceInfo, queryParams); nil != err {
+		blog.Errorf("update net device ID by name fail, error information is %v, params:%v",
+			err, queryParams)
+		return err
+	}
+
+	return nil
 }
 
 // get net device obj ID
