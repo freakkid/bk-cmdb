@@ -36,6 +36,10 @@ type NetCollSearchParams struct {
 	Condition []ConditionItem `json:"condition,omitempty"`
 }
 
+type DeleteNetDeviceBatchOpt struct {
+	DeviceIDs string `json:"device_id"`
+}
+
 type AddNetPropertyResult struct {
 	Result               bool   `json:"result"`
 	ErrMsg               string `json:"error_msg"`
@@ -50,4 +54,8 @@ type SearchNetProperty struct {
 type SearchNetPropertyResult struct {
 	BaseResp `json:",inline"`
 	Data     SearchNetProperty `json:"data"`
+}
+
+type DeleteNetPropertyBatchOpt struct {
+	NetcollectPropertyID string `json:"netcollect_property_id"`
 }
