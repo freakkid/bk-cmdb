@@ -187,10 +187,10 @@ func (lgc *Logics) addDevice(deviceInfo meta.NetcollectDevice, pheader http.Head
 	// add to the storage
 	now := time.Now()
 	deviceInfo.LastTime = &now
+	deviceInfo.OwnerID = ownerID
 
 	if !isExist {
 		deviceInfo.CreateTime = &now
-		deviceInfo.OwnerID = ownerID
 
 		deviceInfo.DeviceID, err = lgc.Instance.GetIncID(common.BKTableNameNetcollectDevice)
 		if nil != err {
@@ -202,6 +202,9 @@ func (lgc *Logics) addDevice(deviceInfo meta.NetcollectDevice, pheader http.Head
 			blog.Error("failed to insert net device, error: %v", err)
 			return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
 		}
+		// blog.V(4).Infof("add net device by deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+		blog.Errorf("add net device by deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+
 		return deviceInfo.DeviceID, nil
 	}
 
@@ -216,7 +219,9 @@ func (lgc *Logics) addDevice(deviceInfo meta.NetcollectDevice, pheader http.Head
 		return -1, err
 	}
 
-	blog.V(4).Infof("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+	// blog.V(4).Infof("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+	blog.Errorf("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+
 	return deviceID, nil
 }
 
