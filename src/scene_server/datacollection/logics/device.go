@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"configcenter/src/common"
@@ -105,6 +104,7 @@ func (lgc *Logics) SearchDevice(pheader http.Header, params *meta.NetCollSearchP
 		return searchResult, nil
 	}
 
+	params.Fields = append(params.Fields, []string{common.BKDeviceIDField, common.BKPropertyIDField}...)
 	if err = lgc.findDevice(params.Fields, deviceCond, &searchResult.Info, params.Page.Sort, params.Page.Start, params.Page.Limit); nil != err {
 		blog.Errorf("search net device fail, search net device by condition [%#v] error: %v", deviceCond, err)
 		return meta.SearchNetDevice{}, defErr.Errorf(common.CCErrCollectNetDeviceGetFail)
@@ -113,15 +113,9 @@ func (lgc *Logics) SearchDevice(pheader http.Header, params *meta.NetCollSearchP
 	return searchResult, nil
 }
 
-func (lgc *Logics) DeleteDevice(pheader http.Header, ID string) error {
+func (lgc *Logics) DeleteDevice(pheader http.Header, netDeviceID int64) error {
 	defErr := lgc.Engine.CCErr.CreateDefaultCCErrorIf(util.GetLanguage(pheader))
 	ownerID := util.GetOwnerID(pheader)
-
-	netDeviceID, err := strconv.ParseInt(ID, 10, 64)
-	if nil != err {
-		blog.Errorf("delete net device with id[%d] to parse the net device id, error: %v", netDeviceID, err)
-		return defErr.Errorf(common.CCErrCommParamsNeedInt, common.BKDeviceIDField)
-	}
 
 	deviceCond := map[string]interface{}{
 		common.BKOwnerIDField:  ownerID,
@@ -145,7 +139,7 @@ func (lgc *Logics) DeleteDevice(pheader http.Header, ID string) error {
 	}
 	if hasProperty {
 		blog.V(4).Infof("delete net device fail, net device has property [%d]", netDeviceID)
-		return defErr.Error(common.CCErrCollectNetPropertyHasPropertyDeleteFail)
+		return defErr.Error(common.CCErrCollectNetDeviceHasPropertyDeleteFail)
 	}
 
 	if err = lgc.Instance.DelByCondition(common.BKTableNameNetcollectDevice, deviceCond); nil != err {
