@@ -202,8 +202,8 @@ func (lgc *Logics) addDevice(deviceInfo meta.NetcollectDevice, pheader http.Head
 			blog.Error("failed to insert net device, error: %v", err)
 			return -1, defErr.Errorf(common.CCErrCollectNetDeviceCreateFail)
 		}
-		// blog.V(4).Infof("add net device by deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
-		blog.Errorf("add net device by deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+
+		blog.V(4).Infof("add net device by deviceInfo [%#+v]", deviceInfo)
 
 		return deviceInfo.DeviceID, nil
 	}
@@ -219,8 +219,7 @@ func (lgc *Logics) addDevice(deviceInfo meta.NetcollectDevice, pheader http.Head
 		return -1, err
 	}
 
-	// blog.V(4).Infof("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
-	blog.Errorf("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
+	blog.V(4).Infof("update net device by name[%s] deviceInfo [%#+v]", deviceInfo.DeviceName, deviceInfo)
 
 	return deviceID, nil
 }
@@ -267,8 +266,7 @@ func (lgc *Logics) getNetDeviceIDByName(deviceName string, ownerID string) (int6
 
 	result := meta.NetcollectDevice{}
 
-	err := lgc.Instance.GetOneByCondition(common.BKTableNameNetcollectDevice, nil, queryParams, &result)
-	if nil != err {
+	if err := lgc.Instance.GetOneByCondition(common.BKTableNameNetcollectDevice, nil, queryParams, &result); nil != err {
 		blog.Errorf("get net device ID by name, query device fail, error information is %v, params:%v",
 			err, queryParams)
 		return 0, err
@@ -283,7 +281,7 @@ func (lgc *Logics) updateNetDeviceByName(deviceInfo meta.NetcollectDevice) error
 		common.BKOwnerIDField:    deviceInfo.OwnerID}
 
 	if err := lgc.Instance.UpdateByCondition(common.BKTableNameNetcollectDevice, deviceInfo, queryParams); nil != err {
-		blog.Errorf("update net device ID by name fail, error information is %v, params:%v",
+		blog.Errorf("update net device by name fail, error information is %v, params:%v",
 			err, queryParams)
 		return err
 	}
