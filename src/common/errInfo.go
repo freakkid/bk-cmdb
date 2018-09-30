@@ -433,6 +433,7 @@ const (
 	CCErrWebGetAddNetDeviceResultFail   = 1111009
 	CCErrWebGetAddNetPropertyResultFail = 1111010
 	CCErrWebGetNetDeviceFail            = 1111011
+	CCErrWebGetNetPropertyFail          = 1111012
 
 	// datacollection 1112xxx
 	CCErrCollectNetDeviceCreateFail            = 1112000
