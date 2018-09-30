@@ -52,14 +52,14 @@ func ImportNetDevice(c *gin.Context) {
 	logics.SetProxyHeader(c)
 
 	// open uploaded file
-	err, errMsg, file := openUploadedFile(c, defErr)
+	file, err, errMsg := openDeviceUploadedFile(c, defErr)
 	if nil != err {
 		blog.Errorf("[Import Net Device] open uploaded file error:%s", err.Error())
 		c.String(http.StatusInternalServerError, string(errMsg))
 		return
 	}
 
-	// get date from uploaded file
+	// get data from uploaded file
 	apiSite, err := cc.AddrSrv.GetServer(types.CC_MODULE_APISERVER)
 	if nil != err {
 		blog.Errorf("[Import Net Device] get api site error:%s", err.Error())
@@ -68,7 +68,7 @@ func ImportNetDevice(c *gin.Context) {
 		return
 	}
 
-	err, errMsg, netDevice := getNetDevicesFromFile(c.Request.Header, defLang, defErr, file, apiSite)
+	netDevice, err, errMsg := getNetDevicesFromFile(c.Request.Header, defLang, defErr, file, apiSite)
 	if nil != err {
 		blog.Errorf("[Import Net Device] http request id:%s, error:%s", util.GetHTTPCCRequestID(c.Request.Header), err.Error())
 		c.String(http.StatusInternalServerError, string(errMsg))
@@ -77,7 +77,7 @@ func ImportNetDevice(c *gin.Context) {
 
 	// http request get device
 	url := apiSite + fmt.Sprintf("/api/%s/netcollect/device/action/create", webCommon.API_VERSION)
-	blog.Infof("[Import Net Device] add device url: %v", url)
+	blog.V(4).Infof("[Import Net Device] add device url: %v", url)
 
 	params := make([]interface{}, 0)
 	line_numbers := []int{}
@@ -85,10 +85,10 @@ func ImportNetDevice(c *gin.Context) {
 		params = append(params, value)
 		line_numbers = append(line_numbers, line)
 	}
-	blog.Infof("[Import Net Device] import device content: %v", params)
+	blog.V(4).Infof("[Import Net Device] import device content: %v", params)
 
 	reply, err := httpRequest(url, params, c.Request.Header)
-	blog.Infof("[Import Net Device] import device result: %v", reply)
+	blog.V(4).Infof("[Import Net Device] import device result: %v", reply)
 
 	if nil != err {
 		c.String(http.StatusInternalServerError, err.Error())
@@ -96,7 +96,7 @@ func ImportNetDevice(c *gin.Context) {
 	}
 
 	// rebuild response body
-	err, reply = rebuildDeviceReponseBody(reply, line_numbers)
+	reply, err = rebuildDeviceReponseBody(reply, line_numbers)
 	if nil != err {
 		c.String(http.StatusInternalServerError, getReturnStr(common.CCErrWebGetAddNetDeviceResultFail,
 			defErr.Errorf(common.CCErrWebGetAddNetDeviceResultFail).Error(), nil))
@@ -187,8 +187,7 @@ func BuildDownLoadNetDeviceExcelTemplate(c *gin.Context) {
 	defLang := cc.Lang.CreateDefaultCCLanguageIf(language)
 	defErr := cc.Error.CreateDefaultCCErrorIf(language)
 
-	randNum := rand.Uint32()
-	file := fmt.Sprintf("%s/%stemplate-%d-%d.xlsx", dir, common.BKNetDevice, time.Now().UnixNano(), randNum)
+	file := fmt.Sprintf("%s/%stemplate-%d-%d.xlsx", dir, common.BKNetDevice, time.Now().UnixNano(), rand.Uint32())
 
 	apiSite := cc.APIAddr()
 	if err := logics.BuildNetDeviceExcelTemplate(c.Request.Header, defLang, apiSite, file); nil != err {
@@ -207,11 +206,11 @@ func BuildDownLoadNetDeviceExcelTemplate(c *gin.Context) {
 	return
 }
 
-func openUploadedFile(c *gin.Context, defErr errors.DefaultCCErrorIf) (err error, errMsg string, file *xlsx.File) {
+func openDeviceUploadedFile(c *gin.Context, defErr errors.DefaultCCErrorIf) (file *xlsx.File, err error, errMsg string) {
 	fileHeader, err := c.FormFile("file")
 	if nil != err {
 		errMsg = getReturnStr(common.CCErrWebFileNoFound, defErr.Error(common.CCErrWebFileNoFound).Error(), nil)
-		return err, errMsg, nil
+		return nil, err, errMsg
 	}
 
 	dir := webCommon.ResourcePath + "/import/"
@@ -222,7 +221,7 @@ func openUploadedFile(c *gin.Context, defErr errors.DefaultCCErrorIf) (err error
 	filePath := fmt.Sprintf("%s/importnetdevice-%d-%d.xlsx", dir, time.Now().UnixNano(), rand.Uint32())
 	if err = c.SaveUploadedFile(fileHeader, filePath); nil != err {
 		errMsg = getReturnStr(common.CCErrWebFileSaveFail, defErr.Errorf(common.CCErrWebFileSaveFail, err.Error()).Error(), nil)
-		return err, errMsg, nil
+		return nil, err, errMsg
 	}
 
 	defer os.Remove(filePath) // del file
@@ -230,15 +229,15 @@ func openUploadedFile(c *gin.Context, defErr errors.DefaultCCErrorIf) (err error
 	file, err = xlsx.OpenFile(filePath)
 	if nil != err {
 		errMsg = getReturnStr(common.CCErrWebOpenFileFail, defErr.Errorf(common.CCErrWebOpenFileFail, err.Error()).Error(), nil)
-		return err, errMsg, nil
+		return nil, err, errMsg
 	}
 
-	return nil, "", file
+	return file, nil, ""
 }
 
 func getNetDevicesFromFile(
 	header http.Header, defLang lang.DefaultCCLanguageIf, defErr errors.DefaultCCErrorIf, file *xlsx.File, apiSite string) (
-	err error, errMsg string, netDevice map[int]map[string]interface{}) {
+	netDevice map[int]map[string]interface{}, err error, errMsg string) {
 
 	netDevice, errMsgs, err := logics.GetImportNetDevices(header, defLang, file, apiSite)
 	if nil != err {
@@ -246,34 +245,34 @@ func getNetDevicesFromFile(
 		errMsg = getReturnStr(common.CCErrWebFileContentFail,
 			defErr.Errorf(common.CCErrWebFileContentFail, err.Error()).Error(),
 			nil)
-		return err, errMsg, nil
+		return nil, err, errMsg
 	}
 	if 0 != len(errMsgs) {
 		errMsg = getReturnStr(common.CCErrWebFileContentFail,
 			defErr.Errorf(common.CCErrWebFileContentFail, " file empty").Error(),
 			common.KvMap{"err": errMsgs})
-		return err, errMsg, nil
+		return nil, err, errMsg
 	}
 	if 0 == len(netDevice) {
 		errMsg = getReturnStr(common.CCErrWebFileContentEmpty,
 			defErr.Errorf(common.CCErrWebFileContentEmpty, "").Error(), nil)
-		return err, errMsg, nil
+		return nil, err, errMsg
 	}
 
-	return nil, "", netDevice
+	return netDevice, nil, ""
 }
 
-func rebuildDeviceReponseBody(reply string, line_numbers []int) (error, string) {
+func rebuildDeviceReponseBody(reply string, line_numbers []int) (string, error) {
 	replyBody := new(meta.Response)
 	if err := json.Unmarshal([]byte(reply), replyBody); nil != err {
 		blog.Errorf("[Import Net Device] unmarshal response body err: %v", err)
-		return err, ""
+		return "", err
 	}
 
 	addDeviceResult, ok := replyBody.Data.([]interface{})
 	if !ok {
 		blog.Errorf("[Import Net Device] 'Data' field of response body convert to []interface{} fail, replyBody.Data %#+v", replyBody.Data)
-		return fmt.Errorf("convert response body fail"), ""
+		return "", fmt.Errorf("convert response body fail")
 	}
 
 	var (
@@ -284,13 +283,13 @@ func rebuildDeviceReponseBody(reply string, line_numbers []int) (error, string) 
 		data, ok := value.(map[string]interface{})
 		if !ok {
 			blog.Errorf("[Import Net Device] traverse replyBody.Data convert to map[string]interface{} fail, data %#+v", data)
-			return fmt.Errorf("convert response body fail"), ""
+			return "", fmt.Errorf("convert response body fail")
 		}
 
 		result, ok := data["result"].(bool)
 		if !ok {
 			blog.Errorf("[Import Net Device] data is not bool: %#+v", data["result"])
-			return fmt.Errorf("convert response body fail"), ""
+			return "", fmt.Errorf("convert response body fail")
 		}
 
 		switch result {
@@ -300,7 +299,7 @@ func rebuildDeviceReponseBody(reply string, line_numbers []int) (error, string) 
 			errMsg, ok := data["error_msg"].(string)
 			if !ok {
 				blog.Errorf("[Import Net Device] data is not string: %#+v", data["error_msg"])
-				return fmt.Errorf("convert response body fail"), ""
+				return "", fmt.Errorf("convert response body fail")
 			}
 
 			errRow = append(errRow, fmt.Sprintf("%d行%s", line_numbers[i], errMsg))
@@ -320,8 +319,8 @@ func rebuildDeviceReponseBody(reply string, line_numbers []int) (error, string) 
 	replyByte, err := json.Marshal(replyBody)
 	if nil != err {
 		blog.Errorf("[Import Net Device] convert rebuilded response body fail, error: %v", err)
-		return err, ""
+		return "", err
 	}
 
-	return nil, string(replyByte)
+	return string(replyByte), nil
 }
