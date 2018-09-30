@@ -82,7 +82,7 @@ func (s *Service) DeleteDevice(req *restful.Request, resp *restful.Response) {
 
 	deleteNetDeviceBatchOpt := new(meta.DeleteNetDeviceBatchOpt)
 	if err := json.NewDecoder(req.Request.Body).Decode(deleteNetDeviceBatchOpt); nil != err {
-		blog.Errorf("[NetDevice] delete net device batch , but decode body failed, err: %v", err)
+		blog.Errorf("[NetDevice] delete net device batch, but decode body failed, err: %v", err)
 		resp.WriteError(http.StatusBadRequest, &meta.RespError{Msg: defErr.Error(common.CCErrCommJSONUnmarshalFailed)})
 		return
 	}

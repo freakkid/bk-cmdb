@@ -104,11 +104,17 @@ func (lgc *Logics) SearchDevice(pheader http.Header, params *meta.NetCollSearchP
 		return searchResult, nil
 	}
 
-	//params.Fields = append(params.Fields, []string{common.BKDeviceIDField, common.BKPropertyIDField}...)//TODO
+	// field bk_obj_id must be in params.Fields//TODO
+	// to help add value of fields(bk_obj_name) from other tables into search result
+	if 0 != len(params.Fields) {
+		params.Fields = append(params.Fields, []string{common.BKObjIDField}...)
+	}
 	if err = lgc.findDevice(params.Fields, deviceCond, &searchResult.Info, params.Page.Sort, params.Page.Start, params.Page.Limit); nil != err {
 		blog.Errorf("search net device fail, search net device by condition [%#v] error: %v", deviceCond, err)
 		return meta.SearchNetDevice{}, defErr.Errorf(common.CCErrCollectNetDeviceGetFail)
 	}
+
+	//TODO 增加 obj_name
 
 	return searchResult, nil
 }
