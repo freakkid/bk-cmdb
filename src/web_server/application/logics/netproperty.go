@@ -54,7 +54,7 @@ func BuildNetPropertyExcelFromData(defLang language.DefaultCCLanguageIf, fields 
 	for _, row := range data {
 		propertyData, ok := row.(map[string]interface{})
 		if !ok {
-			msg := fmt.Sprintf("data format error:%v", row)
+			msg := fmt.Sprintf("[Export Net Property] Build NetProperty excel from data, convert to map[string]interface{} fail, data: %v", row)
 			blog.Errorf(msg)
 			return errors.New(msg)
 		}
@@ -90,8 +90,8 @@ func GetNetPropertyData(header http.Header, apiAddr, netPropertyIDStr string) ([
 	url := apiAddr + fmt.Sprintf("/api/%s/netcollect/property/action/search", webCommon.API_VERSION)
 	result, _ := httpRequest(url, netPropertyCond, header)
 
-	blog.Infof("search netProperty url:%s", url)
-	blog.Infof("search netProperty return:%s", result)
+	blog.V(4).Infof("[Export Net Property] search netProperty url:%s", url)
+	blog.V(4).Infof("[Export Net Property] search netProperty return:%s", result)
 
 	js, _ := simplejson.NewJson([]byte(result))
 	netPropertyDataResult, _ := js.Map()
@@ -108,7 +108,7 @@ func GetNetPropertyData(header http.Header, apiAddr, netPropertyIDStr string) ([
 		return netPropertyInfo, errors.New("no netProperty")
 	}
 
-	blog.Infof("search return netProperty info:%s", netPropertyInfo)
+	blog.V(4).Infof("[Export Net Property] search return netProperty info:%s", netPropertyInfo)
 	return netPropertyInfo, nil
 }
 
@@ -119,13 +119,13 @@ func BuildNetPropertyExcelTemplate(header http.Header, defLang language.DefaultC
 
 	sheet, err := file.AddSheet(common.BKNetProperty)
 	if nil != err {
-		blog.Errorf("add comment sheet error, sheet name:%s, error:%s", common.BKNetProperty, err.Error())
+		blog.Errorf("[Build NetDevice Excel Template] add comment sheet error, sheet name:%s, error:%s", common.BKNetProperty, err.Error())
 		return err
 	}
 
 	fields := GetNetPropertyField(defLang)
 
-	blog.V(5).Infof("BuildNetPropertyExcelTemplate fields count:%d", len(fields))
+	blog.V(4).Infof("[Build NetDevice Excel Template]  fields count:%d", len(fields))
 
 	productExcelHealer(fields, nil, sheet, defLang)
 
