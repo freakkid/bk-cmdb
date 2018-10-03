@@ -101,7 +101,7 @@ func (s *Service) DeleteProperty(req *restful.Request, resp *restful.Response) {
 
 	for _, netPropertyID := range netPropertyIDArr {
 		if err := s.Logics.DeleteProperty(pheader, netPropertyID); nil != err {
-			blog.Errorf("[NetProperty] delete net property failed, with netcollect_property_id [%s], err: %v %", netPropertyID, err)
+			blog.Errorf("[NetProperty] delete net property failed, with netcollect_property_id [%s], err: %v", netPropertyID, err)
 
 			if defErr.Error(common.CCErrCollectNetDeviceObjPropertyNotExist).Error() == err.Error() {
 				resp.WriteError(http.StatusBadRequest, &meta.RespError{Msg: err})

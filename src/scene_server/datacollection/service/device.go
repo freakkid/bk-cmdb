@@ -32,7 +32,7 @@ func (s *Service) CreateDevice(req *restful.Request, resp *restful.Response) {
 
 	deviceList := make([]meta.NetcollectDevice, 0)
 	if err := json.NewDecoder(req.Request.Body).Decode(&deviceList); err != nil {
-		blog.Errorf("add device failed with decode body err: %v", err)
+		blog.Errorf("[NetDevice] add device failed with decode body err: %v", err)
 		resp.WriteError(http.StatusBadRequest, &meta.RespError{Msg: defErr.Error(common.CCErrCommJSONUnmarshalFailed)})
 		return
 	}
@@ -58,14 +58,14 @@ func (s *Service) SearchDevice(req *restful.Request, resp *restful.Response) {
 
 	body := new(meta.NetCollSearchParams)
 	if err := json.NewDecoder(req.Request.Body).Decode(body); nil != err {
-		blog.Errorf("search net device failed with decode body err: %v", err)
+		blog.Errorf("[NetDevice] search net device failed with decode body err: %v", err)
 		resp.WriteError(http.StatusBadRequest, &meta.RespError{Msg: defErr.Error(common.CCErrCommJSONUnmarshalFailed)})
 		return
 	}
 
 	devices, err := s.Logics.SearchDevice(pheader, body)
 	if nil != err {
-		blog.Errorf("search net device failed, err: %v", err)
+		blog.Errorf("[NetDevice] search net device failed, err: %v", err)
 		resp.WriteError(http.StatusInternalServerError, &meta.RespError{Msg: defErr.Error(common.CCErrCollectNetDeviceGetFail)})
 		return
 	}
@@ -102,7 +102,7 @@ func (s *Service) DeleteDevice(req *restful.Request, resp *restful.Response) {
 
 	for _, deviceID := range deviceIDArr {
 		if err := s.Logics.DeleteDevice(pheader, deviceID); nil != err {
-			blog.Errorf("[NetDevice] delete net device failed, with bk_device_id [%s], err: %v %", deviceID, err)
+			blog.Errorf("[NetDevice] delete net device failed, with bk_device_id [%s], err: %v", deviceID, err)
 
 			if defErr.Error(common.CCErrCollectNetDeviceHasPropertyDeleteFail).Error() == err.Error() {
 				resp.WriteError(http.StatusBadRequest, &meta.RespError{Msg: err})
