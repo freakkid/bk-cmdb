@@ -43,4 +43,5 @@ type NetcollectProperty struct {
 	CreateTime           *time.Time `field:"create_time,omitempty" json:"create_time,omitempty" bson:"create_time,omitempty"`
 	LastTime             *time.Time `field:"last_time,omitempty" json:"last_ time,omitempty" bson:"last_time,omitempty"`
 	Unit                 string     `json:"unit,omitempty" bson:"-"`
+	DeviceModel          string     `json:"device_model" bson:"device_model"`
 }

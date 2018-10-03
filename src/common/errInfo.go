@@ -445,7 +445,7 @@ const (
 	CCErrCollectNetPropertyDeleteFail          = 1112006
 	CCErrCollectNetDeviceObjPropertyNotExist   = 1112007
 	CCErrCollectDeviceNotExist                 = 1112008
-	CCErrCollectPeridFormatFail                = 1112009
+	CCErrCollectPeriodFormatFail               = 1112009
 	CCErrCollectNetDeviceHasPropertyDeleteFail = 1112010
 
 	CC_Err_Comm_HOST_CREATE_FAIL          = 4300

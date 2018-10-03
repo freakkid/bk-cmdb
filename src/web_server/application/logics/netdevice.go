@@ -88,21 +88,47 @@ func GetNetDeviceData(header http.Header, apiAddr, deviceIDStr string) ([]interf
 	}
 
 	url := apiAddr + fmt.Sprintf("/api/%s/netcollect/device/action/search", webCommon.API_VERSION)
-	result, _ := httpRequest(url, deviceCond, header)
+	result, err := httpRequest(url, deviceCond, header)
+	if nil != err {
+		blog.Errorf("[Export Net Device] http request error:%v", err)
+	}
 
 	blog.V(4).Infof("[Export Net Device] search device url:%s", url)
 	blog.V(4).Infof("[Export Net Device] search device return:%s", result)
 
-	js, _ := simplejson.NewJson([]byte(result))
-	deviceDataResult, _ := js.Map()
+	js, err := simplejson.NewJson([]byte(result))
+	if nil != err {
+		blog.Errorf("[Export Net Device] convert http reponse string [%s] to json error:%v", result, err)
+	}
+	deviceDataResult, err := js.Map()
+	if nil != err {
+		blog.Errorf("[Export Net Device] convert http reponse json [%#+v] to map[string]interface{} error:%v", deviceDataResult, err)
+	}
 
-	if !deviceDataResult["result"].(bool) {
+	deviceResult, ok := deviceDataResult["result"].(bool)
+	if !ok {
+		blog.Errorf("[Export Net Device] http reponse 'result'[%#+v] is bool", deviceDataResult["result"])
+	}
+	if !deviceResult {
 		return nil, errors.New(deviceDataResult["bk_error_msg"].(string))
 	}
 
-	deviceData := deviceDataResult["data"].(map[string]interface{})
-	deviceInfo := deviceData["info"].([]interface{})
-	deviceCount, _ := deviceData["count"].(json.Number).Int64()
+	deviceData, ok := deviceDataResult["data"].(map[string]interface{})
+	if !ok {
+		blog.Errorf("[Export Net Device] http reponse 'data'[%#+v] is not map[string]interface{}", deviceDataResult["data"])
+	}
+	deviceInfo, ok := deviceData["info"].([]interface{})
+	if !ok {
+		blog.Errorf("[Export Net Device] http reponse 'info'[%#+v] is not []interface{}", deviceData["info"])
+	}
+	_, ok = deviceData["count"].(json.Number)
+	if !ok {
+		blog.Errorf("[Export Net Device] http reponse 'count'[%#+v] is not a number", deviceData["count"])
+	}
+	deviceCount, err := deviceData["count"].(json.Number).Int64()
+	if nil != err {
+		blog.Errorf("[Export Net Device] http reponse 'count'[%#+v] convert to int64 error:%v", deviceData["count"], err)
+	}
 
 	if 0 == deviceCount {
 		return deviceInfo, errors.New("no device")
@@ -160,7 +186,7 @@ func GetNetDevicefield(lang language.DefaultCCLanguageIf) map[string]Property {
 }
 
 // add extra feild to export device
-func AddNetDeviceExtFields(originField *map[string]Property, lang language.DefaultCCLanguageIf) {
+func AddNetDeviceExtFields(originField map[string]Property, lang language.DefaultCCLanguageIf) {
 
 	field := map[string]Property{
 		common.BKDeviceIDField: Property{
@@ -175,11 +201,11 @@ func AddNetDeviceExtFields(originField *map[string]Property, lang language.Defau
 		},
 	}
 
-	originFieldLen := len(*originField)
+	originFieldLen := len(originField)
 
 	for key, value := range field {
 		value.ExcelColIndex = originFieldLen
 		originFieldLen++
-		(*originField)[key] = value
+		originField[key] = value
 	}
 }
